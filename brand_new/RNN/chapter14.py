@@ -192,6 +192,9 @@ def test():
     y = mnist.train.labels
     print(np.shape(y))
 
+    a = np.array([1, 2, 3, 4, 5])
+    print(a[-5:])
+
 def output_projection_wrapper():
     n_inputs      = 1
     n_steps       = 20
@@ -201,8 +204,10 @@ def output_projection_wrapper():
     n_iteration   = 100000
     X = tf.placeholder(dtype=tf.float32, shape=[None, n_steps, n_inputs])
     y = tf.placeholder(dtype=tf.float32, shape=[None, n_steps, n_inputs])
-    basic_cell = rnn.BasicRNNCell(num_units=n_neurons)
+
+    basic_cell = rnn.BasicRNNCell(num_units=n_neurons, activation=tf.nn.relu)
     cell = rnn.OutputProjectionWrapper(cell=basic_cell, output_size=n_outputs)
+
     outputs, states = tf.nn.dynamic_rnn(cell=cell, inputs=X, dtype=tf.float32)
     learning_rate = 0.001
     loss = tf.reduce_mean(tf.square(outputs - y))
@@ -217,11 +222,77 @@ def output_projection_wrapper():
             return
     return
 
+def tricker_RNN():
+    n_inputs        = 28
+    n_steps         = 28
+    n_neurons       = 100
+    n_outputs       = 10
+    batch_size      = 50
+    n_epoch         = 100
+    learning_rate   = 0.001
+    mnist = input_data.read_data_sets('MNIST')
+    X = tf.placeholder(dtype=tf.float32, shape=[None, n_steps, n_inputs])
+    y = tf.placeholder(dtype=tf.int32, shape=[None])
+
+    basic_cell = rnn.BasicRNNCell(num_units=n_neurons, activation=tf.nn.relu)
+    outputs, states = tf.nn.dynamic_rnn(cell=basic_cell, inputs=X, dtype=tf.float32)
+    stacked_rnn_outputs = tf.reshape(outputs, shape=[-1, n_neurons])
+    stacked_outputs = fully_connected(inputs=stacked_rnn_outputs, num_outputs=n_outputs, activation_fn=None)
+    outputs = tf.reshape(stacked_outputs, shape=[-1, n_steps, n_outputs])
+    logits = outputs[:, n_steps - 1, :]
+
+    x_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits)
+    loss = tf.reduce_mean(x_entropy)
+
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+    train_op = optimizer.minimize(loss)
+
+    correct = tf.nn.in_top_k(predictions=logits, targets=y, k=1)
+    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+
+    X_test = mnist.test.images
+    X_test = tf.reshape(X_test, shape=[-1, n_steps, n_inputs])
+    y_test = mnist.test.labels
+
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        sess.run(init)
+        X_batch = 0
+        y_batch = 0
+        for epoch in range(n_epoch):
+            for iteration in range(mnist.train.num_examples // batch_size):
+                X_batch, y_batch = mnist.train.next_batch(batch_size)
+                X_batch = X_batch.reshape([-1, n_steps, n_inputs])
+                sess.run(train_op, feed_dict={X:X_batch, y:y_batch})
+            accuracy_train = accuracy.eval(feed_dict = {X:X_batch, y:y_batch})
+            accuracy_test = accuracy.eval(feed_dict = {X:X_test, y:y_test})
+            print('epoch:', epoch, '\ttrain accuracy:', accuracy_train, '\t test accuracy:', accuracy_test)
+
+    return
+
+def deep_RNN():
+    n_layers = 3
+    n_neurons = 100
+    basic_cell = rnn.BasicRNNCell(num_units=n_neurons)
+    multi_layer_cell = rnn.MultiRNNCell(cells=[basic_cell] * n_layers)
+    outputs, states = tf.nn.dynamic_rnn(cell=multi_layer_cell)
+    return
+
+def RNN_with_dropout():
+    X = 0
+    keep_prob = 0.5
+    cell = rnn.BasicRNNCell(num_units=100)
+    cell_dropout = rnn.DropoutWrapper(cell=cell, input_keep_prob=keep_prob)
+    multi_layer_cell = rnn.MultiRNNCell(cells=[cell_dropout] * 3)
+    outputs, states = tf.nn.dynamic_rnn(cell=multi_layer_cell, inputs = X)
+
+# deep_RNN()
 # Simple_RNN()
 # Static_RNN()
 # Static_RNN2()
 # dynamic_RNN()
 # dynamic_RNN_with_Length()
 # RNN_with_MNIST()
-# test()
-output_projection_wrapper()
+test()
+# output_projection_wrapper()
+# tricker_RNN()
