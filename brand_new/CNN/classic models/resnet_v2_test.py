@@ -21,8 +21,8 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
-from ..CNN import resnet_utils
-from ..CNN import resnet_v2
+from brand_new.CNN import resnet_utils
+from brand_new.CNN import resnet_v2
 
 slim = tf.contrib.slim
 
