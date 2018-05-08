@@ -103,3 +103,18 @@ fn('kejian')
 print('--------------------------------')
 newfn = log4('andy')(fn)
 newfn('andy')
+print('--------------------------------')
+import collections
+point = collections.namedtuple('kejian', ['age', 'height'])
+p = point(25, 180)
+print(p[1])
+name1, age1 = p
+print(name1)
+
+print(p.age)
+
+
+
+
+
+
